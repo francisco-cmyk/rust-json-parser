@@ -35,8 +35,9 @@ fn make_token(chars: &Vec<char>, index: &mut usize) -> Result<Token, TokenizeErr
 }
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub enum TokenizeError {
-  UnifinishedLiteralValue,
   ParseNumberError(ParseFloatError),
+  UnifinishedLiteralValue,
+  UnclosedQuotes,
 }
 
 fn tokenize_null(chars: &Vec<char>, index: &mut usize) -> Result<Token, TokenizeError> {
@@ -98,13 +99,16 @@ fn tokenize_float(chars: &Vec<char>, curr_index: &mut usize) -> Result<Token, To
 fn tokenize_string(chars: &Vec<char>, curr_index: &mut usize) -> Result<Token, TokenizeError> {
   let mut string = String::new();
 
-  while *curr_index < chars.len() {
+  loop {
     *curr_index += 1;
+    if *curr_index >= chars.len() {
+      return Err(TokenizeError::UnclosedQuotes)
+    }
     let ch = chars[*curr_index];
     if ch == '"' {
       break;
     }
-    string.push(ch)
+    string.push(ch);
   }
 
   Ok(Token::String(string))
@@ -208,6 +212,14 @@ mod tests {
     let expected = [Token::Number(1.23)];
 
     let actual = tokenize(input).unwrap();
+    assert_eq!(actual, expected)
+  }
+
+  #[test]
+  fn unclosed_string() {
+    let input = String::from("\"unclosed");
+    let expected = Err(TokenizeError::UnclosedQuotes);
+    let actual = tokenize(input);
     assert_eq!(actual, expected)
   }
 }
